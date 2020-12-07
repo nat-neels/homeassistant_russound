@@ -69,7 +69,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         dev = RussoundZoneDevice(russ, zone_id, name, sources, presets)
         devices.append(dev)
         
-    for source_id, name, is_internal_tuner in sources:
+    for source_id, source_name, source_type in sources:
         await russ.watch_source(source_id)
     
     @callback
@@ -89,12 +89,12 @@ class RussoundZoneDevice(MediaPlayerEntity):
         """Initialize the zone device."""
         super().__init__()
         compliled_sources = []
-        for source_id, name, is_internal_tuner in sources:
-            compliled_sources.append((source_id, name, None))
-            if is_internal_tuner:
+        for source_id, source_name, source_type in sources:
+            compliled_sources.append((source_id, source_name, None))
+            if source_type == "RNET AM/FM Tuner (Internal)":
                 for preset_source_id, bank_id, preset_id, index_id, preset_name in presets:
                     if preset_source_id == source_id:
-                        compliled_sources.append((source_id, name + ": " + preset_name, index_id))
+                        compliled_sources.append((source_id, source_name + ": " + preset_name, index_id))
         self._name = name
         self._russ = russ
         self._zone_id = zone_id
@@ -231,8 +231,8 @@ class RussoundZoneDevice(MediaPlayerEntity):
 
     async def async_select_source(self, source):
         """Select the source input for this zone."""
-        for source_id, name, preset_id in self._sources:
-            if name.lower() != source.lower():
+        for source_id, source_name, preset_id in self._sources:
+            if source_name.lower() != source.lower():
                 continue
             if preset_id == None:
                 await self._russ.send_zone_event(self._zone_id, "SelectSource", source_id)
