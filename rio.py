@@ -102,7 +102,7 @@ class Russound:
         self._host = host
         self._port = port
         self._ioloop_future = None
-        self._cmd_queue = asyncio.Queue(loop=loop)
+        self._cmd_queue = asyncio.Queue()
         self._source_state = {}
         self._zone_state = {}
         self._preset_state = {}
@@ -196,6 +196,7 @@ class Russound:
     def _process_response(self, res):
         s = str(res, 'utf-8').strip()
         ty, payload = s[0], s[2:]
+        
         if ty == 'E':
             logger.debug("Device responded with error: %s", payload)
             raise CommandException(payload)
@@ -225,16 +226,15 @@ class Russound:
     @asyncio.coroutine
     def _ioloop(self, reader, writer):
         queue_future = ensure_future(
-                self._cmd_queue.get(), loop=self._loop)
+                self._cmd_queue.get())
         net_future = ensure_future(
-                reader.readline(), loop=self._loop)
+                reader.readline())
         try:
             logger.debug("Starting IO loop")
             while True:
                 done, pending = yield from asyncio.wait(
                         [queue_future, net_future],
-                        return_when=asyncio.FIRST_COMPLETED,
-                        loop=self._loop)
+                        return_when=asyncio.FIRST_COMPLETED)
 
                 if net_future in done:
                     response = net_future.result()
@@ -243,7 +243,7 @@ class Russound:
                     except CommandException:
                         pass
                     net_future = ensure_future(
-                            reader.readline(), loop=self._loop)
+                            reader.readline())
 
                 if queue_future in done:
                     cmd, future = queue_future.result()
@@ -252,12 +252,12 @@ class Russound:
                     yield from writer.drain()
 
                     queue_future = ensure_future(
-                            self._cmd_queue.get(), loop=self._loop)
+                            self._cmd_queue.get())
 
                     while True:
                         response = yield from net_future
                         net_future = ensure_future(
-                                reader.readline(), loop=self._loop)
+                                reader.readline())
                         try:
                             ty, value = self._process_response(response)
                             if ty == 'S':
@@ -279,7 +279,7 @@ class Russound:
 
     @asyncio.coroutine
     def _send_cmd(self, cmd):
-        future = asyncio.Future(loop=self._loop)
+        future = asyncio.Future()
         yield from self._cmd_queue.put((cmd, future))
         r = yield from future
         return r
@@ -333,9 +333,9 @@ class Russound:
         """
         logger.info("Connecting to %s:%s", self._host, self._port)
         reader, writer = yield from asyncio.open_connection(
-                self._host, self._port, loop=self._loop)
+                self._host, self._port)
         self._ioloop_future = ensure_future(
-                self._ioloop(reader, writer), loop=self._loop)
+                self._ioloop(reader, writer))
         logger.info("Connected")
 
     @asyncio.coroutine
