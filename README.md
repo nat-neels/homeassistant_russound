@@ -1,5 +1,8 @@
 # homeassistant_russound
 
+## Notes
+This install works on Python 3.10 and removes support for any python versions below that on Home Assistant.
+
 ## Install Steps for test
 1. Create folder structure through the file editor:
   /config/custom_components/russound_rio_3/
